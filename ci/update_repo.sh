@@ -6,7 +6,6 @@ source run_or_fail.sh
 rm -f .commit_id
 
 # go to repo and update it to given commit
-run_or_fail "Repository folder not found!" pushd $1 1> /dev/null
 run_or_fail "Could not reset git" git reset --hard HEAD
 
 # get the most recent commit
