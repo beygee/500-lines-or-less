@@ -4,6 +4,7 @@ import { execSync } from 'child_process'
 import * as process from 'process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import * as path from 'path'
 
 interface Args {
   dispatcherServer: string
@@ -11,15 +12,22 @@ interface Args {
 }
 
 function parseArgs(): Args {
-  const argv = yargs(hideBin(process.argv)).option('dispatcher-server', {
-    describe: 'dispatcher host:port, by default it uses localhost:8888',
-    default: 'localhost:8888',
-    type: 'string',
-  }).argv
+  const argv = yargs(hideBin(process.argv))
+    .option('dispatcher-server', {
+      describe: 'dispatcher host:port, by default it uses localhost:8888',
+      default: 'localhost:8888',
+      type: 'string',
+    })
+    .option('repo', {
+      describe: 'repository to observe',
+      default: path.resolve(__dirname, 'test_git_folder'),
+      type: 'string',
+    })
+    .parseSync()
 
   return {
     dispatcherServer: argv['dispatcher-server'],
-    repo: argv['$0'] as string,
+    repo: argv['repo'] as string,
   }
 }
 

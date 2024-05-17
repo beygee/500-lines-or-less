@@ -1,12 +1,10 @@
 import * as fs from 'fs'
 import * as net from 'net'
-import * as os from 'os'
 import * as path from 'path'
 import * as process from 'process'
-import * as readline from 'readline'
-import * as yargs from 'yargs'
+import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import { setInterval, setTimeout } from 'timers'
+import { setTimeout } from 'timers'
 import * as helpers from './helpers'
 import { Mutex } from 'async-mutex'
 
@@ -31,7 +29,7 @@ class DispatcherServer {
         try {
           const response = await helpers.communicate(
             runner.host,
-            parseInt(runner.port),
+            runner.port,
             `runtest:${commitId}`,
           )
           if (response === 'OK') {
@@ -85,7 +83,7 @@ class DispatcherHandler {
         const address = commandGroups[2]
         const [host, port] = address?.split(':').slice(1) || []
         if (host && port) {
-          const runner = { host, port }
+          const runner = { host, port: parseInt(port, 10) }
           this.server.runners.push(runner)
           this.request.write('OK')
         } else {
@@ -183,7 +181,7 @@ async function serve() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
       for (const runner of server.runners) {
         try {
-          const response = await helpers.communicate(runner.host, parseInt(runner.port), 'ping')
+          const response = await helpers.communicate(runner.host, runner.port, 'ping')
           if (response !== 'pong') {
             console.log(`removing runner ${runner.host}:${runner.port}`)
             await mutex.runExclusive(() => manageCommitLists(runner))
@@ -234,3 +232,5 @@ if (require.main === module) {
     process.exit(1)
   })
 }
+
+// npx ts-node src/dispatcher.ts

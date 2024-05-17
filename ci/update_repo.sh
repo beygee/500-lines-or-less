@@ -6,6 +6,7 @@ source run_or_fail.sh
 rm -f .commit_id
 
 # go to repo and update it to given commit
+run_or_fail "Repository folder not found!" pushd $1 1> /dev/null
 run_or_fail "Could not reset git" git reset --hard HEAD
 
 # get the most recent commit
@@ -18,7 +19,7 @@ fi
 COMMIT_ID=`echo $COMMIT | awk '{ print $2 }'`
 
 # update the repo
-run_or_fail "Could not pull from repository" git pull origin master
+run_or_fail "Could not pull from repository" git pull
 
 # get the most recent commit
 COMMIT=$(run_or_fail "Could not call 'git log' on repository" git log -n1)
