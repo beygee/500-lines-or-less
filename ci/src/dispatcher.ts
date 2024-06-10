@@ -1,12 +1,13 @@
 import * as fs from 'fs'
-import * as net from 'net'
 import * as path from 'path'
-import * as process from 'process'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { setTimeout } from 'timers'
 import * as helpers from './helpers'
 import { Mutex } from 'async-mutex'
+
+import { Server, Socket } from 'socket.io'
+import { createServer } from 'http'
 
 const commandRe = new RegExp(/(\w+)(:.+)*?/)
 const BUF_SIZE = 1024
@@ -52,32 +53,28 @@ class DispatcherServer {
 
 class DispatcherHandler {
   server: DispatcherServer
-  request: net.Socket
+  socket: Socket
   data: Buffer
 
-  constructor(server: DispatcherServer, request: net.Socket) {
+  constructor(server: DispatcherServer, socket: any) {
     this.server = server
-    this.request = request
+    this.socket = socket
     this.data = Buffer.alloc(0)
   }
 
   async handle() {
-    this.request.on('data', (chunk) => {
-      this.data = Buffer.concat([this.data, chunk])
-    })
-
-    this.request.on('end', async () => {
-      const message = this.data.toString().trim()
-      const commandGroups = commandRe.exec(message)
+    this.socket.on('data', async (message: string) => {
+      console.log(message)
+      this.data = Buffer.concat([this.data, Buffer.from(message)])
+      const commandGroups = commandRe.exec(message.trim())
       if (!commandGroups) {
-        this.request.write('Invalid command')
-        this.request.end()
+        this.socket.emit('response', 'Invalid command')
         return
       }
       const command = commandGroups[1]
       if (command === 'status') {
         console.log('in status')
-        this.request.write('OK')
+        this.socket.emit('response', 'OK')
       } else if (command === 'register') {
         console.log('register')
         const address = commandGroups[2]
@@ -85,19 +82,19 @@ class DispatcherHandler {
         if (host && port) {
           const runner = { host, port: parseInt(port, 10) }
           this.server.runners.push(runner)
-          this.request.write('OK')
+          this.socket.emit('response', 'OK')
         } else {
-          this.request.write('Invalid address')
+          this.socket.emit('response', 'Invalid address')
         }
       } else if (command === 'dispatch') {
         console.log('going to dispatch')
         const commitId = commandGroups[2]?.slice(1)
         if (!commitId) {
-          this.request.write('Invalid commit ID')
+          this.socket.emit('response', 'Invalid commit ID')
         } else if (!this.server.runners.length) {
-          this.request.write('No runners are registered')
+          this.socket.emit('response', 'No runners are registered')
         } else {
-          this.request.write('OK')
+          this.socket.emit('response', 'OK')
           await this.server.dispatchTests(commitId)
         }
       } else if (command === 'results') {
@@ -106,7 +103,7 @@ class DispatcherHandler {
         const commitId = results[0]
         const lengthMsg = parseInt(results[1], 10)
         if (!commitId || isNaN(lengthMsg)) {
-          this.request.write('Invalid results')
+          this.socket.emit('response', 'Invalid results')
         } else {
           const remainingBuffer =
             BUF_SIZE - (command.length + commitId.length + results[1].length + 3)
@@ -122,22 +119,22 @@ class DispatcherHandler {
           }
           const data = this.data.toString().split(':').slice(3).join('\n')
           fs.writeFileSync(path.join('test_results', commitId), data)
-          this.request.write('OK')
+          this.socket.emit('response', 'OK')
         }
       } else {
-        this.request.write('Invalid command')
+        this.socket.emit('response', 'Invalid command')
       }
-      this.request.end()
     })
   }
 
   receiveAdditionalData(length: number): Promise<Buffer> {
     return new Promise((resolve) => {
       const chunks: Buffer[] = []
-      this.request.on('data', (chunk) => {
-        chunks.push(chunk)
+      this.socket.on('data', (chunk: string) => {
+        const bufferChunk = Buffer.from(chunk)
+        chunks.push(bufferChunk)
         if (Buffer.concat(chunks).length >= length) {
-          this.request.removeAllListeners('data')
+          this.socket.removeAllListeners('data')
           resolve(Buffer.concat(chunks))
         }
       })
@@ -148,8 +145,8 @@ class DispatcherHandler {
 async function serve() {
   const args = yargs(hideBin(process.argv))
     .option('host', {
-      describe: "dispatcher's host, by default it uses localhost",
-      default: 'localhost',
+      describe: "dispatcher's host, by default it uses 127.0.0.1",
+      default: '127.0.0.1',
       type: 'string',
     })
     .option('port', {
@@ -204,26 +201,37 @@ async function serve() {
     }
   }
 
-  const tcpServer = net.createServer(async (socket) => {
+  const httpServer = createServer()
+  const io = new Server(httpServer, { transports: ['websocket'], cors: { origin: '*' } })
+
+  io.on('connection', (socket) => {
+    console.log(socket)
     const handler = new DispatcherHandler(server, socket)
-    await handler.handle()
+    handler.handle()
   })
 
-  tcpServer.listen(args.port, args.host, () => {
+  io.engine.on('connection_error', (err) => {
+    console.log(err.req) // the request object
+    console.log(err.code) // the error code, for example 1
+    console.log(err.message) // the error message, for example "Session ID unknown"
+    console.log(err.context) // some additional error context
+  })
+
+  httpServer.listen(args.port, args.host, async () => {
     console.log(`serving on ${args.host}:${args.port}`)
+
+    const runnerHeartbeat = runnerChecker()
+    const redistributor = redistribute()
+
+    process.on('SIGINT', () => {
+      server.dead = true
+      httpServer.close()
+      console.log('Server shutting down')
+      process.exit()
+    })
+
+    await Promise.all([runnerHeartbeat, redistributor])
   })
-
-  const runnerHeartbeat = runnerChecker()
-  const redistributor = redistribute()
-
-  process.on('SIGINT', () => {
-    server.dead = true
-    tcpServer.close()
-    console.log('Server shutting down')
-    process.exit()
-  })
-
-  await Promise.all([runnerHeartbeat, redistributor])
 }
 
 if (require.main === module) {
@@ -232,5 +240,3 @@ if (require.main === module) {
     process.exit(1)
   })
 }
-
-// npx ts-node src/dispatcher.ts

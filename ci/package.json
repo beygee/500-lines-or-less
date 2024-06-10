@@ -7,7 +7,9 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:repo_observer": "ts-node src/repo_observer.ts",
+    "dev:dispatcher": "ts-node src/dispatcher.ts",
+    "dev:test_runner": "ts-node src/test_runner.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,6 +21,10 @@
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
     "yargs": "^17.7.2"
   }
 }
