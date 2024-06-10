@@ -14,8 +14,6 @@ export class Cube extends ModelObject {
   private texture: WebGLTexture
 
   private vertexCount: number
-  private position: { x: number; y: number; z: number }
-  private rotation: { x: number; y: number; z: number }
 
   constructor(
     gl: WebGLRenderingContext,
@@ -28,9 +26,7 @@ export class Cube extends ModelObject {
     this.initBuffers()
   }
 
-  public draw(programInfo: ProgramInfo, projectionMatrix: mat4) {
-    const modelViewMatrix = mat4.create()
-
+  public draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelViewMatrix: mat4) {
     // Now move the drawing position a bit to where we want to
     // start drawing the square.
     mat4.translate(

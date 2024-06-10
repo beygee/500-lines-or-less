@@ -2,6 +2,8 @@ import { mat4 } from 'gl-matrix'
 import { Cube } from './model.objects/cube'
 import { ShaderProgram } from './shader'
 import { ModelObject } from './model.objects/model.object'
+import { Camera } from './camera'
+import { InputHandler } from './input.handler'
 
 export interface ProgramInfo {
   program: WebGLProgram
@@ -22,6 +24,8 @@ export class Scene {
   private gl: WebGLRenderingContext
   private programInfo: any
   private then: number
+  private camera: Camera
+  private inputHandler: InputHandler
 
   private children: ModelObject[]
 
@@ -31,6 +35,13 @@ export class Scene {
 
     this.children = []
     this.then = 0
+    this.camera = new Camera()
+
+    this.inputHandler = new InputHandler()
+
+    this.inputHandler.onMouseMove((xOffset, yOffset) => {
+      this.camera.processMouseMovement(xOffset, yOffset)
+    })
 
     requestAnimationFrame((now) => this.render(now))
   }
@@ -47,11 +58,27 @@ export class Scene {
     this.programInfo = programInfo
   }
 
+  private processInput(deltaTime: number): void {
+    if (this.inputHandler.isKeyPressed('w')) {
+      this.camera.processKeyboard('FORWARD', deltaTime)
+    }
+    if (this.inputHandler.isKeyPressed('s')) {
+      this.camera.processKeyboard('BACKWARD', deltaTime)
+    }
+    if (this.inputHandler.isKeyPressed('a')) {
+      this.camera.processKeyboard('LEFT', deltaTime)
+    }
+    if (this.inputHandler.isKeyPressed('d')) {
+      this.camera.processKeyboard('RIGHT', deltaTime)
+    }
+  }
+
   private render(now: number): void {
     now *= 0.001 // convert to seconds
     const deltaTime = now - this.then
     this.then = now
 
+    this.processInput(deltaTime)
     this.update(deltaTime)
     this.drawScene()
 
@@ -79,11 +106,14 @@ export class Scene {
     const zNear = 0.1
     const zFar = 100.0
     const projectionMatrix = mat4.create()
-
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar)
 
+    const viewMatrix = this.camera.getViewMatrix()
+
     for (const modelObject of this.children) {
-      modelObject.draw(this.programInfo, projectionMatrix)
+      const modelViewMatrix = mat4.create()
+      mat4.multiply(modelViewMatrix, viewMatrix, modelObject.getModelMatrix())
+      modelObject.draw(this.programInfo, projectionMatrix, modelViewMatrix)
     }
   }
 }
