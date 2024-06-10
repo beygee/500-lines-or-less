@@ -1,4 +1,4 @@
-import { mat4 } from 'gl-matrix'
+import { mat4, vec3 } from 'gl-matrix'
 import { ModelObject } from './model.object'
 import { ProgramInfo } from '../scene'
 
@@ -17,34 +17,18 @@ export class Cube extends ModelObject {
 
   constructor(
     gl: WebGLRenderingContext,
-    position: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
+    localPosition: { x: number; y: number; z: number } = { x: 0, y: 0, z: 0 },
   ) {
     super()
     this.gl = gl
-    this.position = position
-    this.rotation = { x: 1, y: 0.7, z: 0.3 }
+    this.localPosition = vec3.fromValues(localPosition.x, localPosition.y, localPosition.z)
+    this.localRotation = vec3.fromValues(0, 0, 0)
     this.initBuffers()
   }
 
-  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, viewMatrix: mat4) {
-    const modelViewMatrix = mat4.create()
-
-    // Now move the drawing position a bit to where we want to
-    // start drawing the square.
-    mat4.translate(
-      modelViewMatrix, // destination matrix
-      modelViewMatrix, // matrix to translate
-      [this.position.x, this.position.y, this.position.z],
-    ) // amount to translate
-
-    mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.x, [1, 0, 0])
-    mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.y, [0, 1, 0])
-    mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.z, [0, 0, 1])
-
-    mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix)
-
+  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelMatrix: mat4) {
     const normalMatrix = mat4.create()
-    mat4.invert(normalMatrix, modelViewMatrix)
+    mat4.invert(normalMatrix, modelMatrix)
     mat4.transpose(normalMatrix, normalMatrix)
 
     this.setPositionAttribute(programInfo)
@@ -59,7 +43,7 @@ export class Cube extends ModelObject {
     this.gl.useProgram(programInfo.program)
 
     this.gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix)
-    this.gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix)
+    this.gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelMatrix)
     this.gl.uniformMatrix4fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix)
 
     // Tell WebGL we want to affect texture unit 0
@@ -78,8 +62,9 @@ export class Cube extends ModelObject {
   }
 
   protected update(deltaTime: number) {
-    this.rotation.x += deltaTime
-    this.rotation.y += deltaTime
+    this.localRotation[0] += deltaTime
+    this.localRotation[1] += deltaTime
+    this.localRotation[2] += deltaTime
   }
 
   private initBuffers(): void {

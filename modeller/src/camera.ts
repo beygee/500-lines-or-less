@@ -40,6 +40,7 @@ export class Camera {
     }
     if (direction === 'BACKWARD') {
       vec3.scaleAndAdd(this.position, this.position, this.front, -velocity)
+      console.log(this.position)
     }
     if (direction === 'LEFT') {
       vec3.scaleAndAdd(this.position, this.position, this.right, -velocity)

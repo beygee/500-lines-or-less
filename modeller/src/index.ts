@@ -19,7 +19,7 @@ function main() {
 
   const cube1 = new Cube(gl, { x: 1, y: 0, z: -6 })
   const cube2 = new Cube(gl, { x: -1, y: 2, z: -10 })
-  const cube3 = new Cube(gl, { x: 1, y: 0, z: 0 })
+  const cube3 = new Cube(gl, { x: -1, y: 2, z: 0 })
 
   scene.add(cube1)
   scene.add(cube2)

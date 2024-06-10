@@ -1,14 +1,14 @@
-import { mat4 } from 'gl-matrix'
+import { mat4, vec3 } from 'gl-matrix'
 import { ProgramInfo } from '../scene'
 
 export abstract class ModelObject {
-  public position: { x: number; y: number; z: number }
-  public rotation: { x: number; y: number; z: number }
+  public localPosition: vec3
+  public localRotation: vec3
   public children: ModelObject[]
 
   constructor() {
-    this.position = { x: 0, y: 0, z: 0 }
-    this.rotation = { x: 0, y: 0, z: 0 }
+    this.localPosition = vec3.fromValues(0, 0, 0)
+    this.localRotation = vec3.fromValues(0, 0, 0)
     this.children = []
   }
 
@@ -28,24 +28,34 @@ export abstract class ModelObject {
     }
   }
 
-  public drawSelf(programInfo: ProgramInfo, projectionMatrix: mat4, modelViewMatrix: mat4): void {
+  public drawSelf(programInfo: ProgramInfo, projectionMatrix: mat4, parentModelMatrix: mat4): void {
+    const modelMatrix = mat4.create()
+    mat4.multiply(modelMatrix, parentModelMatrix, this.getLocalModelMatrix())
+
     // 현재 객체 그리기
-    this.draw(programInfo, projectionMatrix, modelViewMatrix)
+    this.draw(programInfo, projectionMatrix, modelMatrix)
     // 자식 객체들 그리기
     for (const child of this.children) {
-      const childModelViewMatrix = mat4.create()
-      mat4.multiply(childModelViewMatrix, modelViewMatrix, child.getModelMatrix())
-      child.drawSelf(programInfo, projectionMatrix, childModelViewMatrix)
+      child.drawSelf(programInfo, projectionMatrix, modelMatrix)
     }
   }
 
-  public getModelMatrix(): mat4 {
+  public getLocalModelMatrix(): mat4 {
     const modelMatrix = mat4.create()
-    mat4.translate(modelMatrix, modelMatrix, [this.position.x, this.position.y, this.position.z])
-    mat4.rotate(modelMatrix, modelMatrix, this.rotation.x, [1, 0, 0])
-    mat4.rotate(modelMatrix, modelMatrix, this.rotation.y, [0, 1, 0])
-    mat4.rotate(modelMatrix, modelMatrix, this.rotation.z, [0, 0, 1])
+    mat4.translate(modelMatrix, modelMatrix, this.localPosition)
+    mat4.rotate(modelMatrix, modelMatrix, this.localRotation[0], [1, 0, 0])
+    mat4.rotate(modelMatrix, modelMatrix, this.localRotation[1], [0, 1, 0])
+    mat4.rotate(modelMatrix, modelMatrix, this.localRotation[2], [0, 0, 1])
     return modelMatrix
+  }
+
+  public getWorldPosition(parentModelMatrix: mat4): vec3 {
+    const worldPosition = vec3.create()
+    const modelMatrix = this.getLocalModelMatrix()
+    const worldMatrix = mat4.create()
+    mat4.multiply(worldMatrix, parentModelMatrix, modelMatrix)
+    mat4.getTranslation(worldPosition, worldMatrix)
+    return worldPosition
   }
 
   public add(child: ModelObject): void {
