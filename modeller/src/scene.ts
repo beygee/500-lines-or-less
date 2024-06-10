@@ -59,16 +59,16 @@ export class Scene {
   }
 
   private processInput(deltaTime: number): void {
-    if (this.inputHandler.isKeyPressed('w')) {
+    if (this.inputHandler.isKeyPressed('KeyW')) {
       this.camera.processKeyboard('FORWARD', deltaTime)
     }
-    if (this.inputHandler.isKeyPressed('s')) {
+    if (this.inputHandler.isKeyPressed('KeyS')) {
       this.camera.processKeyboard('BACKWARD', deltaTime)
     }
-    if (this.inputHandler.isKeyPressed('a')) {
+    if (this.inputHandler.isKeyPressed('KeyA')) {
       this.camera.processKeyboard('LEFT', deltaTime)
     }
-    if (this.inputHandler.isKeyPressed('d')) {
+    if (this.inputHandler.isKeyPressed('KeyD')) {
       this.camera.processKeyboard('RIGHT', deltaTime)
     }
   }

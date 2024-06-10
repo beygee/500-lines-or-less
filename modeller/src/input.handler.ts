@@ -12,8 +12,8 @@ export class InputHandler {
   }
 
   private initEventHandlers(): void {
-    window.addEventListener('keydown', (e) => (this.keys[e.key] = true))
-    window.addEventListener('keyup', (e) => (this.keys[e.key] = false))
+    window.addEventListener('keydown', (e) => (this.keys[e.code] = true))
+    window.addEventListener('keyup', (e) => (this.keys[e.code] = false))
     window.addEventListener('mousedown', () => (this.isMouseDown = true))
     window.addEventListener('mouseup', () => (this.isMouseDown = false))
     window.addEventListener('mousemove', (e) => this.handleMouseMove(e))
@@ -27,8 +27,8 @@ export class InputHandler {
     }
   }
 
-  public isKeyPressed(key: string): boolean {
-    return this.keys[key] || false
+  public isKeyPressed(code: string): boolean {
+    return this.keys[code] || false
   }
 
   public onMouseMove(callback: (xOffset: number, yOffset: number) => void): void {

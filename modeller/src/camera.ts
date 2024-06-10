@@ -19,7 +19,7 @@ export class Camera {
     this.front = vec3.fromValues(0, 0, -1)
     this.right = vec3.create()
     this.up = vec3.create()
-    this.speed = 2.5
+    this.speed = 5
     this.sensitivity = 0.1
 
     this.updateCameraVectors()
@@ -40,7 +40,6 @@ export class Camera {
     }
     if (direction === 'BACKWARD') {
       vec3.scaleAndAdd(this.position, this.position, this.front, -velocity)
-      console.log(this.position)
     }
     if (direction === 'LEFT') {
       vec3.scaleAndAdd(this.position, this.position, this.right, -velocity)
