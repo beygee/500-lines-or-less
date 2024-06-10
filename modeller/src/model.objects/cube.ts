@@ -26,7 +26,9 @@ export class Cube extends ModelObject {
     this.initBuffers()
   }
 
-  public draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelViewMatrix: mat4) {
+  public draw(programInfo: ProgramInfo, projectionMatrix: mat4, viewMatrix: mat4) {
+    const modelViewMatrix = mat4.create()
+
     // Now move the drawing position a bit to where we want to
     // start drawing the square.
     mat4.translate(
@@ -38,6 +40,8 @@ export class Cube extends ModelObject {
     mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.x, [1, 0, 0])
     mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.y, [0, 1, 0])
     mat4.rotate(modelViewMatrix, modelViewMatrix, this.rotation.z, [0, 0, 1])
+
+    mat4.multiply(modelViewMatrix, viewMatrix, modelViewMatrix)
 
     const normalMatrix = mat4.create()
     mat4.invert(normalMatrix, modelViewMatrix)

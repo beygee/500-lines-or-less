@@ -111,9 +111,7 @@ export class Scene {
     const viewMatrix = this.camera.getViewMatrix()
 
     for (const modelObject of this.children) {
-      const modelViewMatrix = mat4.create()
-      mat4.multiply(modelViewMatrix, viewMatrix, modelObject.getModelMatrix())
-      modelObject.draw(this.programInfo, projectionMatrix, modelViewMatrix)
+      modelObject.draw(this.programInfo, projectionMatrix, viewMatrix)
     }
   }
 }

@@ -54,7 +54,7 @@ export class Camera {
     yoffset *= this.sensitivity
 
     this.yaw += xoffset
-    this.pitch += yoffset
+    this.pitch -= yoffset // y-coordinates range from bottom to top
 
     if (constrainPitch) {
       if (this.pitch > 89.0) this.pitch = 89.0
