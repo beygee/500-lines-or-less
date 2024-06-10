@@ -87,7 +87,7 @@ export class Scene {
 
   private update(deltaTime: number): void {
     for (const modelObject of this.children) {
-      modelObject.update(deltaTime)
+      modelObject.updateSelf(deltaTime)
     }
   }
 
@@ -111,7 +111,7 @@ export class Scene {
     const viewMatrix = this.camera.getViewMatrix()
 
     for (const modelObject of this.children) {
-      modelObject.draw(this.programInfo, projectionMatrix, viewMatrix)
+      modelObject.drawSelf(this.programInfo, projectionMatrix, viewMatrix)
     }
   }
 }

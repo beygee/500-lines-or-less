@@ -26,7 +26,7 @@ export class Cube extends ModelObject {
     this.initBuffers()
   }
 
-  public draw(programInfo: ProgramInfo, projectionMatrix: mat4, viewMatrix: mat4) {
+  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, viewMatrix: mat4) {
     const modelViewMatrix = mat4.create()
 
     // Now move the drawing position a bit to where we want to
@@ -77,7 +77,7 @@ export class Cube extends ModelObject {
     this.gl.drawElements(this.gl.TRIANGLES, vertexCount, type, offset)
   }
 
-  public update(deltaTime: number) {
+  protected update(deltaTime: number) {
     this.rotation.x += deltaTime
     this.rotation.y += deltaTime
   }
