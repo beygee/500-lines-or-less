@@ -1,5 +1,5 @@
 import { mat4 } from 'gl-matrix'
-import { Cube } from './cube'
+import { Cube } from './model.objects/cube'
 import { ShaderProgram } from './shader'
 import { ModelObject } from './model.objects/model.object'
 

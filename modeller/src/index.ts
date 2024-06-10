@@ -1,4 +1,4 @@
-import { Cube } from './cube'
+import { Cube } from './model.objects/cube'
 import { Scene } from './scene'
 
 function main() {

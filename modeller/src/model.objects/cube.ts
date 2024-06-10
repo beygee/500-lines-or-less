@@ -1,6 +1,6 @@
 import { mat4 } from 'gl-matrix'
-import { ModelObject } from './model.objects/model.object'
-import { ProgramInfo } from './scene'
+import { ModelObject } from './model.object'
+import { ProgramInfo } from '../scene'
 
 export class Cube extends ModelObject {
   private gl: WebGLRenderingContext
@@ -89,7 +89,7 @@ export class Cube extends ModelObject {
     const textureCoordBuffer = this.initTextureBuffer(this.gl)
     const normalBuffer = this.initNormalBuffer(this.gl)
 
-    this.texture = this.loadTexture('cubetexture.jpg')
+    this.texture = this.loadTexture('./model.objects/cubetexture.jpg')
 
     this.positionBuffer = positionBuffer
     this.colorBuffer = colorBuffer
