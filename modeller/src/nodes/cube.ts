@@ -1,8 +1,8 @@
 import { mat4, vec3 } from 'gl-matrix'
-import { ModelObject } from './model.object'
+import { Node } from './node'
 import { ProgramInfo } from '../scene'
 
-export class Cube extends ModelObject {
+export class Cube extends Node {
   private gl: WebGLRenderingContext
 
   private positionBuffer: WebGLBuffer
@@ -61,11 +61,7 @@ export class Cube extends ModelObject {
     this.gl.drawElements(this.gl.TRIANGLES, vertexCount, type, offset)
   }
 
-  protected update(deltaTime: number) {
-    this.localRotation[0] += deltaTime
-    this.localRotation[1] += deltaTime
-    this.localRotation[2] += deltaTime
-  }
+  protected update(deltaTime: number) {}
 
   private initBuffers(): void {
     const positionBuffer = this.initPositionBuffer(this.gl)
@@ -74,7 +70,7 @@ export class Cube extends ModelObject {
     const textureCoordBuffer = this.initTextureBuffer(this.gl)
     const normalBuffer = this.initNormalBuffer(this.gl)
 
-    this.texture = this.loadTexture('./model.objects/cubetexture.jpg')
+    this.texture = this.loadTexture('./nodes/cubetexture.jpg')
 
     this.positionBuffer = positionBuffer
     this.colorBuffer = colorBuffer

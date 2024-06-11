@@ -1,7 +1,7 @@
 import { mat4 } from 'gl-matrix'
-import { Cube } from './model.objects/cube'
+import { Cube } from './nodes/cube'
 import { ShaderProgram } from './shader'
-import { ModelObject } from './model.objects/model.object'
+import { Node } from './nodes/node'
 import { Camera } from './camera'
 import { InputHandler } from './input.handler'
 
@@ -27,7 +27,7 @@ export class Scene {
   private camera: Camera
   private inputHandler: InputHandler
 
-  private children: ModelObject[]
+  private children: Node[]
 
   constructor(gl: WebGLRenderingContext) {
     this.gl = gl
@@ -46,8 +46,8 @@ export class Scene {
     requestAnimationFrame((now) => this.render(now))
   }
 
-  public add(modelObject: ModelObject): void {
-    this.children.push(modelObject)
+  public add(node: Node): void {
+    this.children.push(node)
   }
 
   private initShaders(): void {
@@ -86,8 +86,8 @@ export class Scene {
   }
 
   private update(deltaTime: number): void {
-    for (const modelObject of this.children) {
-      modelObject.updateSelf(deltaTime)
+    for (const node of this.children) {
+      node.updateSelf(deltaTime)
     }
   }
 
@@ -110,8 +110,8 @@ export class Scene {
 
     const viewMatrix = this.camera.getViewMatrix()
 
-    for (const modelObject of this.children) {
-      modelObject.drawSelf(this.programInfo, projectionMatrix, viewMatrix)
+    for (const node of this.children) {
+      node.drawSelf(this.programInfo, projectionMatrix, viewMatrix)
     }
   }
 }

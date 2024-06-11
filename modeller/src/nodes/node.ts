@@ -1,23 +1,21 @@
 import { mat4, vec3 } from 'gl-matrix'
 import { ProgramInfo } from '../scene'
 
-export abstract class ModelObject {
+export class Node {
   public localPosition: vec3
   public localRotation: vec3
-  public children: ModelObject[]
+  public localScale: vec3
+  public children: Node[]
 
   constructor() {
     this.localPosition = vec3.fromValues(0, 0, 0)
     this.localRotation = vec3.fromValues(0, 0, 0)
+    this.localScale = vec3.fromValues(1, 1, 1)
     this.children = []
   }
 
-  protected abstract update(deltaTime: number): void
-  protected abstract draw(
-    programInfo: ProgramInfo,
-    projectionMatrix: mat4,
-    modelViewMatrix: mat4,
-  ): void
+  protected update(deltaTime: number): void {}
+  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelViewMatrix: mat4): void {}
 
   public updateSelf(deltaTime: number): void {
     // 각 객체의 고유한 업데이트 로직
@@ -46,6 +44,7 @@ export abstract class ModelObject {
     mat4.rotate(modelMatrix, modelMatrix, this.localRotation[0], [1, 0, 0])
     mat4.rotate(modelMatrix, modelMatrix, this.localRotation[1], [0, 1, 0])
     mat4.rotate(modelMatrix, modelMatrix, this.localRotation[2], [0, 0, 1])
+    mat4.scale(modelMatrix, modelMatrix, this.localScale)
     return modelMatrix
   }
 
@@ -58,7 +57,31 @@ export abstract class ModelObject {
     return worldPosition
   }
 
-  public add(child: ModelObject): void {
+  public add(child: Node): void {
     this.children.push(child)
+  }
+
+  public setPosition(x: number, y: number, z: number): void {
+    vec3.set(this.localPosition, x, y, z)
+  }
+
+  public addPosition(x: number, y: number, z: number): void {
+    vec3.add(this.localPosition, this.localPosition, vec3.fromValues(x, y, z))
+  }
+
+  public setRotation(x: number, y: number, z: number): void {
+    vec3.set(this.localRotation, x, y, z)
+  }
+
+  public addRotation(x: number, y: number, z: number): void {
+    vec3.add(this.localRotation, this.localRotation, vec3.fromValues(x, y, z))
+  }
+
+  public setScale(x: number, y: number, z: number): void {
+    vec3.set(this.localScale, x, y, z)
+  }
+
+  public addScale(x: number, y: number, z: number): void {
+    vec3.add(this.localScale, this.localScale, vec3.fromValues(x, y, z))
   }
 }
