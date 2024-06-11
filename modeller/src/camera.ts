@@ -25,6 +25,12 @@ export class Camera {
     this.updateCameraVectors()
   }
 
+  public getFrontDirection(): vec3 {
+    const direction = vec3.create()
+    vec3.normalize(direction, this.front)
+    return direction
+  }
+
   public getViewMatrix(): mat4 {
     const viewMatrix = mat4.create()
     const center = vec3.create()

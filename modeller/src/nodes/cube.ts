@@ -1,13 +1,15 @@
 import { mat4, vec3 } from 'gl-matrix'
 import { Node } from './node'
-import { ProgramInfo } from '../scene'
+import { AABB } from './aabb'
+import { ShaderProgram } from '../shaders'
+
+let cachedTexture: WebGLTexture | null = null
 
 export class Cube extends Node {
   private gl: WebGLRenderingContext
 
   private positionBuffer: WebGLBuffer
   private indexBuffer: WebGLBuffer
-  private colorBuffer: WebGLBuffer
   private textureCoordBuffer: WebGLBuffer
   private normalBuffer: WebGLBuffer
 
@@ -24,27 +26,37 @@ export class Cube extends Node {
     this.localPosition = vec3.fromValues(localPosition.x, localPosition.y, localPosition.z)
     this.localRotation = vec3.fromValues(0, 0, 0)
     this.initBuffers()
+    this.updateAABB()
   }
 
-  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelMatrix: mat4) {
+  protected draw(shaderProgram: ShaderProgram, projectionMatrix: mat4, modelMatrix: mat4) {
+    const { textureProgramInfo, outlineProgramInfo } = shaderProgram
+
     const normalMatrix = mat4.create()
     mat4.invert(normalMatrix, modelMatrix)
     mat4.transpose(normalMatrix, normalMatrix)
 
-    this.setPositionAttribute(programInfo)
-    // this.setColorAttribute(programInfo)
-    this.setTextureAttribute(programInfo)
-    this.setNormalAttribute(programInfo)
+    this.setPositionAttribute(shaderProgram)
+    this.setTextureAttribute(shaderProgram)
+    this.setNormalAttribute(shaderProgram)
 
     // Tell WebGL which indices to use to index the vertices
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
 
     // Tell WebGL to use our program when drawing
-    this.gl.useProgram(programInfo.program)
+    this.gl.useProgram(textureProgramInfo.program)
 
-    this.gl.uniformMatrix4fv(programInfo.uniformLocations.projectionMatrix, false, projectionMatrix)
-    this.gl.uniformMatrix4fv(programInfo.uniformLocations.modelViewMatrix, false, modelMatrix)
-    this.gl.uniformMatrix4fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix)
+    this.gl.uniformMatrix4fv(
+      textureProgramInfo.uniformLocations.projectionMatrix,
+      false,
+      projectionMatrix,
+    )
+    this.gl.uniformMatrix4fv(
+      textureProgramInfo.uniformLocations.modelViewMatrix,
+      false,
+      modelMatrix,
+    )
+    this.gl.uniformMatrix4fv(textureProgramInfo.uniformLocations.normalMatrix, false, normalMatrix)
 
     // Tell WebGL we want to affect texture unit 0
     this.gl.activeTexture(this.gl.TEXTURE0)
@@ -53,7 +65,13 @@ export class Cube extends Node {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture)
 
     // Tell the shader we bound the texture to texture unit 0
-    this.gl.uniform1i(programInfo.uniformLocations.uSampler, 0)
+    this.gl.uniform1i(textureProgramInfo.uniformLocations.uSampler, 0)
+
+    if (this.picked) {
+      this.gl.uniform1i(textureProgramInfo.uniformLocations.uUseBrighterColor, 1)
+    } else {
+      this.gl.uniform1i(textureProgramInfo.uniformLocations.uUseBrighterColor, 0)
+    }
 
     const vertexCount = this.vertexCount
     const type = this.gl.UNSIGNED_SHORT
@@ -61,19 +79,25 @@ export class Cube extends Node {
     this.gl.drawElements(this.gl.TRIANGLES, vertexCount, type, offset)
   }
 
-  protected update(deltaTime: number) {}
+  protected update(deltaTime: number) {
+    this.updateAABB()
+  }
 
   private initBuffers(): void {
     const positionBuffer = this.initPositionBuffer(this.gl)
-    const colorBuffer = this.initColorBuffer(this.gl)
     const indexBuffer = this.initIndexBuffer(this.gl)
     const textureCoordBuffer = this.initTextureBuffer(this.gl)
     const normalBuffer = this.initNormalBuffer(this.gl)
 
-    this.texture = this.loadTexture('./nodes/cubetexture.jpg')
+    // Check if the texture is already loaded and cached
+    if (cachedTexture) {
+      this.texture = cachedTexture
+    } else {
+      this.texture = this.loadTexture('./nodes/cubetexture.jpg')
+      cachedTexture = this.texture
+    }
 
     this.positionBuffer = positionBuffer
-    this.colorBuffer = colorBuffer
     this.indexBuffer = indexBuffer
     this.textureCoordBuffer = textureCoordBuffer
     this.normalBuffer = normalBuffer
@@ -115,33 +139,6 @@ export class Cube extends Node {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
 
     return positionBuffer
-  }
-
-  private initColorBuffer(gl: WebGLRenderingContext) {
-    const faceColors = [
-      [1.0, 1.0, 1.0, 1.0], // Front face: white
-      [1.0, 0.0, 0.0, 1.0], // Back face: red
-      [0.0, 1.0, 0.0, 1.0], // Top face: green
-      [0.0, 0.0, 1.0, 1.0], // Bottom face: blue
-      [1.0, 1.0, 0.0, 1.0], // Right face: yellow
-      [1.0, 0.0, 1.0, 1.0], // Left face: purple
-    ]
-
-    // Convert the array of colors into a table for all the vertices.
-
-    var colors = []
-
-    for (var j = 0; j < faceColors.length; ++j) {
-      const c = faceColors[j]
-      // Repeat each color four times for the four vertices of the face
-      colors = colors.concat(c, c, c, c)
-    }
-
-    const colorBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW)
-
-    return colorBuffer
   }
 
   private initIndexBuffer(gl: WebGLRenderingContext) {
@@ -253,7 +250,9 @@ export class Cube extends Node {
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute.
-  private setPositionAttribute(programInfo) {
+  private setPositionAttribute(shaderProgram: ShaderProgram) {
+    const textureProgramInfo = shaderProgram.textureProgramInfo
+
     const numComponents = 3 // pull out 3 values per iteration
     const type = this.gl.FLOAT // the data in the buffer is 32bit floats
     const normalize = false // don't normalize
@@ -262,38 +261,20 @@ export class Cube extends Node {
     const offset = 0 // how many bytes inside the buffer to start from
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer)
     this.gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexPosition,
+      textureProgramInfo.attribLocations.vertexPosition,
       numComponents,
       type,
       normalize,
       stride,
       offset,
     )
-    this.gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition)
-  }
-
-  // Tell WebGL how to pull out the colors from the color buffer
-  // into the vertexColor attribute.
-  private setColorAttribute(programInfo) {
-    const numComponents = 4
-    const type = this.gl.FLOAT
-    const normalize = false
-    const stride = 0
-    const offset = 0
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer)
-    this.gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexColor,
-      numComponents,
-      type,
-      normalize,
-      stride,
-      offset,
-    )
-    this.gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor)
+    this.gl.enableVertexAttribArray(textureProgramInfo.attribLocations.vertexPosition)
   }
 
   // tell webgl how to pull out the texture coordinates from buffer
-  private setTextureAttribute(programInfo) {
+  private setTextureAttribute(shaderProgram: ShaderProgram) {
+    const textureProgramInfo = shaderProgram.textureProgramInfo
+
     const num = 2 // every coordinate composed of 2 values
     const type = this.gl.FLOAT // the data in the buffer is 32-bit float
     const normalize = false // don't normalize
@@ -301,19 +282,21 @@ export class Cube extends Node {
     const offset = 0 // how many bytes inside the buffer to start from
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer)
     this.gl.vertexAttribPointer(
-      programInfo.attribLocations.textureCoord,
+      textureProgramInfo.attribLocations.textureCoord,
       num,
       type,
       normalize,
       stride,
       offset,
     )
-    this.gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord)
+    this.gl.enableVertexAttribArray(textureProgramInfo.attribLocations.textureCoord)
   }
 
   // Tell WebGL how to pull out the normals from
   // the normal buffer into the vertexNormal attribute.
-  private setNormalAttribute(programInfo) {
+  private setNormalAttribute(shaderProgram: ShaderProgram) {
+    const textureProgramInfo = shaderProgram.textureProgramInfo
+
     const numComponents = 3
     const type = this.gl.FLOAT
     const normalize = false
@@ -321,14 +304,14 @@ export class Cube extends Node {
     const offset = 0
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.normalBuffer)
     this.gl.vertexAttribPointer(
-      programInfo.attribLocations.vertexNormal,
+      textureProgramInfo.attribLocations.vertexNormal,
       numComponents,
       type,
       normalize,
       stride,
       offset,
     )
-    this.gl.enableVertexAttribArray(programInfo.attribLocations.vertexNormal)
+    this.gl.enableVertexAttribArray(textureProgramInfo.attribLocations.vertexNormal)
   }
 
   //
@@ -390,5 +373,14 @@ export class Cube extends Node {
 
   private isPowerOf2(value: number) {
     return (value & (value - 1)) === 0
+  }
+
+  private updateAABB() {
+    const halfSize = vec3.fromValues(this.localScale[0], this.localScale[1], this.localScale[2])
+    const min = vec3.create()
+    const max = vec3.create()
+    vec3.subtract(min, vec3.create(), halfSize)
+    vec3.add(max, vec3.create(), halfSize)
+    this.aabb = new AABB(min, max)
   }
 }

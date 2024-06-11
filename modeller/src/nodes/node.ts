@@ -1,21 +1,31 @@
 import { mat4, vec3 } from 'gl-matrix'
-import { ProgramInfo } from '../scene'
+import { AABB } from './aabb'
+import { TextureProgramInfo } from '../shaders/texture'
+import { ShaderProgram } from '../shaders'
 
 export class Node {
   public localPosition: vec3
   public localRotation: vec3
   public localScale: vec3
   public children: Node[]
+  public aabb: AABB | null
+  public picked: boolean
 
   constructor() {
     this.localPosition = vec3.fromValues(0, 0, 0)
     this.localRotation = vec3.fromValues(0, 0, 0)
     this.localScale = vec3.fromValues(1, 1, 1)
     this.children = []
+    this.aabb = null
+    this.picked = false
   }
 
   protected update(deltaTime: number): void {}
-  protected draw(programInfo: ProgramInfo, projectionMatrix: mat4, modelViewMatrix: mat4): void {}
+  protected draw(
+    shaderProgram: ShaderProgram,
+    projectionMatrix: mat4,
+    modelViewMatrix: mat4,
+  ): void {}
 
   public updateSelf(deltaTime: number): void {
     // 각 객체의 고유한 업데이트 로직
@@ -26,15 +36,19 @@ export class Node {
     }
   }
 
-  public drawSelf(programInfo: ProgramInfo, projectionMatrix: mat4, parentModelMatrix: mat4): void {
+  public drawSelf(
+    shaderProgram: ShaderProgram,
+    projectionMatrix: mat4,
+    parentModelMatrix: mat4,
+  ): void {
     const modelMatrix = mat4.create()
     mat4.multiply(modelMatrix, parentModelMatrix, this.getLocalModelMatrix())
 
     // 현재 객체 그리기
-    this.draw(programInfo, projectionMatrix, modelMatrix)
+    this.draw(shaderProgram, projectionMatrix, modelMatrix)
     // 자식 객체들 그리기
     for (const child of this.children) {
-      child.drawSelf(programInfo, projectionMatrix, modelMatrix)
+      child.drawSelf(shaderProgram, projectionMatrix, modelMatrix)
     }
   }
 
@@ -83,5 +97,9 @@ export class Node {
 
   public addScale(x: number, y: number, z: number): void {
     vec3.add(this.localScale, this.localScale, vec3.fromValues(x, y, z))
+  }
+
+  public getAABB(): AABB | null {
+    return this.aabb
   }
 }

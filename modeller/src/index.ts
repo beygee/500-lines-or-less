@@ -19,13 +19,25 @@ function main() {
 
   const scene = new Scene(gl)
 
+  // const cube = new Cube(gl, { x: 0, y: 0, z: -10 })
+
+  // const cube2 = new Cube(gl, { x: 2, y: 2, z: 2 })
+  // const cube3 = new Cube(gl, { x: 2, y: 2, z: 2 })
+
+  // cube.add(cube2)
+  // cube2.add(cube3)
+
+  // cube.setRotation(1, 1, 0.5)
+
+  // scene.add(cube)
+
   const ground = new Node()
   generateTerrain(gl, ground)
   scene.add(ground)
 
   const cube1 = new RotatingCube(gl, { x: 8, y: -1, z: -20 })
   const cube2 = new RotatingCube(gl, { x: -2, y: 2, z: 0 })
-  cube2.setScale(0.5, 0.5, 0.5)
+  // cube2.setScale(0.5, 0.5, 0.5)
 
   scene.add(cube1)
   cube1.add(cube2)
